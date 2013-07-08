@@ -113,6 +113,11 @@ class CronFormat
       repeaters << v2
     end
 
+    raw_units[4].gsub!(/(sun|mon|tues|wed|thurs|fri|satur|sun)(day)?|tue|thu|sat/) do |x|
+      a = %w(sunday monday tuesday wednesday thursday friday saturday)
+      a.index a.grep(/#{x}/i).first
+    end
+
     raw_date = raw_units.map.with_index {|x,i| dt[i].call(x) }
     
     # expand the repeater
@@ -137,6 +142,7 @@ class CronFormat
 
       d = date.map{|x| x ? x.clone : nil}
       wday, year = d.pop(2)
+      
       d << year
 
       next unless day_valid? d.reverse.take 3
