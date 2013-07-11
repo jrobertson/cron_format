@@ -9,6 +9,8 @@ require 'time'
 MINUTE = 60
 HOUR = MINUTE * 60
 DAY = HOUR * 24
+TF = "%s-%s-%s %s:%s"
+
 
 class Array
 
@@ -51,7 +53,7 @@ class CronFormat
     month_proc = lambda {|t1,n|
       a = t1.to_a
       a[4] = a[4] + n <= 12 ? a[4] + n  : a[4] + n - 12
-      t = Time.parse("%s-%s-%s %s:%s" % a.values_at(5,4,3,2,1,0))
+      t = Time.parse(TF % a.values_at(5,4,3,2,1,0))
       t -= DAY until t.month == a[4]
       return t
     }
@@ -78,17 +80,17 @@ class CronFormat
     units = @to_time.to_a.values_at(1..4) + [nil, @to_time.year]
       
     procs = {
-      min: lambda{|x, interval| x += (interval * MINUTE).to_i},
-      hour: lambda{|x, interval| x += (interval * HOUR).to_i},
-      day: lambda{|x, interval| x += (interval * DAY).to_i}, 
-      month: lambda{|x, interval| 
+        min: lambda {|x, interval| x += (interval * MINUTE).to_i},
+       hour: lambda {|x, interval| x += (interval * HOUR).to_i},
+        day: lambda {|x, interval| x += (interval * DAY).to_i}, 
+      month: lambda {|x, interval| 
          date = x.to_a.values_at(1..5)
          interval.times { date[3].succ! }
-         Time.parse("%s-%s-%s %s:%s" % date.reverse)},
-      year: lambda{|x, interval| 
+         Time.parse(TF % date.reverse)},
+       year: lambda {|x, interval| 
          date = x.to_a.values_at(1..5)
          interval.times { date[4].succ! }
-         Time.parse("%s-%s-%s %s:%s" % date.reverse)}
+         Time.parse(TF % date.reverse)}
     }
 
     dt = units.map do |start|
@@ -113,12 +115,13 @@ class CronFormat
       raw_units << v1
       repeaters << v2
     end
-
-    raw_units[4].gsub!(/(sun|mon|tues|wed|thurs|fri|satur|sun)(day)?|tue|thu|sat/) do |x|
+    
+    r = /(sun|mon|tues|wed|thurs|fri|satur|sun)(day)?|tue|thu|sat/i
+    raw_units[4].gsub!(r) do |x|
       a = %w(sunday monday tuesday wednesday thursday friday saturday)
       a.index a.grep(/#{x}/i).first
     end
-
+    
     raw_date = raw_units.map.with_index {|x,i| dt[i].call(x) }
     
     # expand the repeater
@@ -137,6 +140,7 @@ class CronFormat
       end
     end  
    
+    
     dates = raw_date.inflate
     
     a = dates.map do |date|
@@ -147,11 +151,11 @@ class CronFormat
       d << year
 
       next unless day_valid? d.reverse.take 3
-      t = Time.parse("%s-%s-%s %s:%s" % d.reverse)
+      t = Time.parse(TF % d.reverse)
         
       if t < @to_time and wday and wday != t.wday then
         d[2], d[3] = @to_time.to_a.values_at(3,4).map(&:to_s)
-        t = Time.parse("%s-%s-%s %s:%s" % d.reverse)
+        t = Time.parse(TF % d.reverse)
         t += DAY until t.wday == wday.to_i
       end
 
@@ -159,7 +163,7 @@ class CronFormat
       while t < @to_time and i >= 0 and raw_a[i][/\*/]
 
         d[i] = @to_time.to_a[i+1].to_s
-        t = Time.parse("%s-%s-%s %s:%s" % d.reverse)
+        t = Time.parse(TF % d.reverse)
         i -= 1
       end
 
@@ -169,11 +173,11 @@ class CronFormat
           # increment the year
 
           d[4].succ!
-          t = Time.parse("%s-%s-%s %s:%s" % d.reverse)
+          t = Time.parse(TF % d.reverse)
 
           if repeaters[4] then
             d[4].succ!
-            t = Time.parse("%s-%s-%s %s:%s" % d.reverse)
+            t = Time.parse(TF % d.reverse)
           end
         elsif t.day < @to_time.day and raw_a[3] == '*' then
 
@@ -184,7 +188,7 @@ class CronFormat
             d[3] = '1'
             d[4].succ!
           end
-          t = Time.parse("%s-%s-%s %s:%s" % d.reverse)
+          t = Time.parse(TF % d.reverse)
         elsif  (t.hour < @to_time.hour or (t.hour == @to_time.hour \
           and t.min < @to_time.min and raw_a[1] != '*') ) \
             and raw_a[2] == '*' then

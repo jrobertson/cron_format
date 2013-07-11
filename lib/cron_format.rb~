@@ -30,7 +30,8 @@ class CronFormat
   end
   
   def next()
-    nudge(); parse()
+    nudge() unless @cron_string =~ %r{/}
+    parse()
   end
   
   private    
