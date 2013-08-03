@@ -24,7 +24,7 @@ end
 
 class CronFormat
 
-  attr_reader :to_time
+  attr_reader :to_time, :to_expression
 
   def initialize(cron_string, now=Time.now)  
     @cron_string, @to_time = cron_string, now
@@ -121,6 +121,8 @@ class CronFormat
       a = %w(sunday monday tuesday wednesday thursday friday saturday)
       a.index a.grep(/#{x}/i).first
     end
+    
+    @to_expression = (raw_a[0..3] + [raw_units[4]])[0..4].join ' '
     
     raw_date = raw_units.map.with_index {|x,i| dt[i].call(x) }
     

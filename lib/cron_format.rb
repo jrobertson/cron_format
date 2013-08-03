@@ -118,7 +118,7 @@ class CronFormat
     
     r = /(sun|mon|tues|wed|thurs|fri|satur|sun)(day)?|tue|thu|sat/i
     raw_units[4].gsub!(r) do |x|
-      a = %w(sunday monday tuesday wednesday thursday friday saturday)
+      a = Date::DAYNAMES
       a.index a.grep(/#{x}/i).first
     end
     
@@ -230,8 +230,10 @@ class CronFormat
   end
     
   def day_valid?(date)
+
     year, month, day = date
-    last_day = DateTime.parse("%s-%s-%s" % [year, month.succ, 1]) - 1
+    last_day = DateTime.parse("%s-%s-%s" % [year, 
+                      (month.to_i < 12 ? month.succ : 1), 1]) - 1
     day.to_i <= last_day.day
   end  
   
