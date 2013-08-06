@@ -161,14 +161,17 @@ class CronFormat
        
       # if there is a defined weekday, increment a day at 
       #                          a time to match that weekday
-      #jr050813 if t < @to_time and wday and wday != t.wday then
       if wday and wday != t.wday then
         
-        d[2], d[3] = @to_time.to_a.values_at(3,4).map(&:to_s)
+        t = Time.parse(TF % d.reverse)        
         
-        t = Time.parse(TF % d.reverse)
-        t += DAY until t.wday == wday.to_i        
-        t += (7 + repeaters[4].to_i) * DAY if t < @to_time and repeaters[4]
+        if repeaters[4] then
+          t += (7 + repeaters[4].to_i) * DAY while t < @to_time
+        else
+          d[2], d[3] = @to_time.to_a.values_at(3,4).map(&:to_s)         
+          t += DAY until t.wday == wday.to_i        
+        end
+        
       end
       
       # increment the month, day, hour, and minute for 

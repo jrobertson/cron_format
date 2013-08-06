@@ -116,16 +116,18 @@ class CronFormat
       repeaters << v2
     end
 
-    if raw_units[4] then
+    if raw_a[4] != '*' then
       r = /(sun|mon|tues|wed|thurs|fri|satur|sun)(day)?|tue|thu|sat/i    
 
-      raw_units[4].gsub!(r) do |x|
+      to_i = lambda {|x|
         a = Date::DAYNAMES
         a.index a.grep(/#{x}/i).first
-      end
+      }
+      raw_a[4].gsub!(r,&to_i)
+      raw_units[4].gsub!(r,&to_i) 
     end
     
-    @to_expression = (raw_a[0..3] + [raw_units[4]])[0..4].join ' '
+    @to_expression = raw_a[0..4].join ' '
     raw_date = raw_units.map.with_index {|x,i| dt[i].call(x) }
 
     # expand the repeater
