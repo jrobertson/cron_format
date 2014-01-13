@@ -9,17 +9,8 @@ require 'time'
 MINUTE = 60
 HOUR = MINUTE * 60
 DAY = HOUR * 24
+WEEK = DAY * 7
 TF = "%s-%s-%s %s:%s"
-
-
-class Array
-
-  def inflate()
-    Array.new(self.max_by {|x| x.length}.length).map do |x|
-      self.map{|x| x.length <= 1 ? x.first : x.shift}
-    end
-  end
-end
 
 
 class CronFormat
@@ -73,7 +64,7 @@ class CronFormat
   end    
   
   def parse()
-    
+
     raw_a = @cron_string.split
     raw_a << '*' if raw_a.length <= 5 # add the year?
 
@@ -87,6 +78,7 @@ class CronFormat
          date = x.to_a.values_at(1..5)
          interval.times { date[3].succ! }
          Time.parse(TF % date.reverse)},
+       week: lambda {|x, interval| x += (interval * WEEK).to_i}, 
        year: lambda {|x, interval| 
          date = x.to_a.values_at(1..5)
          interval.times { date[4].succ! }
@@ -148,7 +140,7 @@ class CronFormat
       end
     end  
    
-    dates = raw_date.inflate
+    dates = inflate(raw_date)
     
     a = dates.map do |date|
 
@@ -190,11 +182,11 @@ class CronFormat
 
         if t.month < @to_time.month and raw_a[4] == '*' then
           # increment the year
-
           d[4].succ!
           t = Time.parse(TF % d.reverse)
 
           if repeaters[4] then
+
             d[4].succ!
             t = Time.parse(TF % d.reverse)
           end
@@ -231,7 +223,7 @@ class CronFormat
       if wday then
         t += DAY until t.wday == wday.to_i
       end
-      
+
       # finally, if the date is still less than the current time we can
       #      increment the date using any repeating intervals
       if t <= @to_time and repeaters.any? then
@@ -239,6 +231,7 @@ class CronFormat
         repeaters.each_with_index do |x,i|
 
           if x then
+
             t = procs.values[i].call(t, x.to_i)
           end
         end
@@ -257,5 +250,11 @@ class CronFormat
                       (month.to_i < 12 ? month.succ : 1), 1]) - 1
     day.to_i <= last_day.day
   end  
+
+  def inflate(a)
+    Array.new(a.max_by {|x| x.length}.length).map do |x|
+      a.map{|x| x.length <= 1 ? x.first : x.shift}
+    end
+  end
   
 end
