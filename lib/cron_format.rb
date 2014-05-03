@@ -268,7 +268,7 @@ class CronFormat
 
   def inflate(raw_a)
 
-    a = raw_a.dclone
+    a = Array.new raw_a
 
     Array.new(a.max_by {|x| x.length}.length).map do |x|
       a.map{|x| x.length <= 1 ? x.first : x.shift}

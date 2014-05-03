@@ -9,17 +9,8 @@ require 'time'
 MINUTE = 60
 HOUR = MINUTE * 60
 DAY = HOUR * 24
+WEEK = DAY * 7
 TF = "%s-%s-%s %s:%s"
-
-
-class Array
-
-  def inflate()
-    Array.new(self.max_by {|x| x.length}.length).map do |x|
-      self.map{|x| x.length <= 1 ? x.first : x.shift}
-    end
-  end
-end
 
 
 class CronFormat
@@ -32,6 +23,7 @@ class CronFormat
   end
   
   def next()
+
     nudge() unless @cron_string =~ %r{/}
     parse()
   end
@@ -68,17 +60,18 @@ class CronFormat
       day_proc
     ]
 
-    @to_time = units[index].call @to_time, n
+    r = units[index].call @to_time, n
+    @to_time = r
 
   end    
   
   def parse()
-    
+
     raw_a = @cron_string.split
     raw_a << '*' if raw_a.length <= 5 # add the year?
 
     units = @to_time.to_a.values_at(1..4) + [nil, @to_time.year]
-      
+
     procs = {
         min: lambda {|x, interval| x += (interval * MINUTE).to_i},
        hour: lambda {|x, interval| x += (interval * HOUR).to_i},
@@ -87,6 +80,7 @@ class CronFormat
          date = x.to_a.values_at(1..5)
          interval.times { date[3].succ! }
          Time.parse(TF % date.reverse)},
+       week: lambda {|x, interval| x += (interval * WEEK).to_i}, 
        year: lambda {|x, interval| 
          date = x.to_a.values_at(1..5)
          interval.times { date[4].succ! }
@@ -109,7 +103,7 @@ class CronFormat
     
     # take any repeater out of the unit value
     raw_units, repeaters = [], []
-
+    
     raw_a.each do |x| 
       v1, v2 = x.split('/')
       raw_units << v1
@@ -136,6 +130,7 @@ class CronFormat
 
     if repeaters.any? then
       repeaters.each_with_index do |x,i|
+
         next if i == 4
 
         if x and not raw_a[i][/^\*/] then
@@ -147,9 +142,9 @@ class CronFormat
         end 
       end
     end  
-   
-    dates = raw_date.inflate
-    
+
+    dates = inflate(raw_date)
+
     a = dates.map do |date|
 
       d = date.map{|x| x ? x.clone : nil}
@@ -158,22 +153,26 @@ class CronFormat
 
       next unless day_valid? d.reverse.take 3
       t = Time.parse(TF % d.reverse)      
-       
+
       # if there is a defined weekday, increment a day at 
       #                          a time to match that weekday
-      #jr050813 if t < @to_time and wday and wday != t.wday then
       if wday and wday != t.wday then
         
-        d[2], d[3] = @to_time.to_a.values_at(3,4).map(&:to_s)
+        t = Time.parse(TF % d.reverse)        
+
+        if repeaters[4] then
+          t += repeaters[4].to_i * WEEK while t < @to_time
+        else
+          d[2], d[3] = @to_time.to_a.values_at(3,4).map(&:to_s)         
+          t += DAY until t.wday == wday.to_i        
+        end
         
-        t = Time.parse(TF % d.reverse)
-        t += DAY until t.wday == wday.to_i        
-        t += (7 + repeaters[4].to_i) * DAY if t < @to_time and repeaters[4]
       end
       
       # increment the month, day, hour, and minute for 
       #              expressions which match '* * * *' consecutively
       i = 3
+
       while t < @to_time and i >= 0 and raw_a[i][/\*/]
 
         d[i] = @to_time.to_a[i+1].to_s
@@ -187,24 +186,16 @@ class CronFormat
 
         if t.month < @to_time.month and raw_a[4] == '*' then
           # increment the year
-
           d[4].succ!
           t = Time.parse(TF % d.reverse)
 
           if repeaters[4] then
+
             d[4].succ!
             t = Time.parse(TF % d.reverse)
           end
         elsif t.day < @to_time.day and raw_a[3] == '*' then
-
-          # increment the month
-          if d[3].to_i <= 11 then
-            d[3].succ!
-          else 
-            d[3] = '1'
-            d[4].succ!
-          end
-          t = Time.parse(TF % d.reverse)
+          t = increment_month d
         elsif  (t.hour < @to_time.hour or (t.hour == @to_time.hour \
           and t.min < @to_time.min and raw_a[1] != '*') ) \
             and raw_a[2] == '*' then
@@ -219,6 +210,8 @@ class CronFormat
           # increment the minute
           t += MINUTE * ((@to_time.min - d[0].to_i) + 1)
           t = procs.values[i].call(t, repeaters[i].to_i) if repeaters[i]
+        elsif raw_a[3] == '*' then
+          t = increment_month d        
         end   
 
       end
@@ -226,9 +219,15 @@ class CronFormat
       # after the units have been incremented we need to 
       #                   increment the weekday again if need be
       if wday then
-        t += DAY until t.wday == wday.to_i
+
+        if raw_date[2].length > 1 then
+
+          t += DAY until t.wday == wday.to_i and raw_date[2].include? t.day.to_s
+        else
+          t += DAY until t.wday == wday.to_i
+        end
       end
-      
+
       # finally, if the date is still less than the current time we can
       #      increment the date using any repeating intervals
       if t <= @to_time and repeaters.any? then
@@ -254,5 +253,26 @@ class CronFormat
                       (month.to_i < 12 ? month.succ : 1), 1]) - 1
     day.to_i <= last_day.day
   end  
+
+  def increment_month(d)
+
+    if d[3].to_i <= 11 then
+      d[3].succ!
+    else 
+      d[3] = '1'
+      d[4].succ!
+    end
+
+    Time.parse(TF % d.reverse)
+  end  
+
+  def inflate(raw_a)
+
+    a = raw_a.dclone
+
+    Array.new(a.max_by {|x| x.length}.length).map do |x|
+      a.map{|x| x.length <= 1 ? x.first : x.shift}
+    end
+  end
   
 end
