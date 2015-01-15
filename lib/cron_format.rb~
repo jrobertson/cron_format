@@ -22,7 +22,7 @@ class CronFormat
     parse()
   end
   
-  def next_date()
+  def next()
 
     nudge() unless @cron_string =~ %r{/}
     parse()
@@ -61,6 +61,7 @@ class CronFormat
     ]
 
     r = units[index].call @to_time, n
+
     @to_time = r
 
   end    
@@ -69,7 +70,31 @@ class CronFormat
 
     raw_a = @cron_string.split
     raw_a << '*' if raw_a.length <= 5 # add the year?
- 
+    mins, hours, day, month, wday, year = raw_a[0..5]
+    
+    if day[/\d+/] and month[/\d+/] and year == '*' then
+      @to_time += DAY until @to_time.day == day.to_i and \
+                                                @to_time.month == month.to_i
+    end
+    
+    if mins[/^\d+$/] and hours[/^\d+$/] then
+      @to_time += MINUTE until @to_time.min == mins.to_i and \
+                                                  @to_time.hour == hours.to_i
+      @to_time -= MINUTE
+    else
+      
+      if mins[/^\d+$/] then
+        @to_time += MINUTE until @to_time.min == mins.to_i 
+        @to_time -= 1
+      end
+      
+      @to_time += HOUR until @to_time.hour == hours.to_i if hours[/^\d+$/]
+    end
+    
+    if wday[/^[0-6]$/] and @to_time.wday != wday.to_i then
+      @to_time += DAY until @to_time.wday == wday.to_i
+    end
+    
     dayceiling = raw_a[2][/-(\d+)$/,1]
    
     if dayceiling and dayceiling.to_i <= @to_time.day then
@@ -80,7 +105,7 @@ class CronFormat
 
       @to_time = dt2.to_time 
     end
-    
+
     units = @to_time.to_a.values_at(1..4) + [nil, @to_time.year]
 
     procs = {
@@ -122,7 +147,6 @@ class CronFormat
     end
     
     
-
     if raw_a[4] != '*' then
       r = /(sun|mon|tues|wed|thurs|fri|satur|sun)(day)?|tue|thu|sat/i    
 
@@ -240,6 +264,7 @@ class CronFormat
         else
           t += DAY until t.wday == wday.to_i
         end
+
       end
 
       # finally, if the date is still less than the current time we can
