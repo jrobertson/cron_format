@@ -22,7 +22,7 @@ class CronFormat
     parse()
   end
   
-  def next_date()
+  def next()
 
     nudge() unless @cron_string =~ %r{/}
     parse()

@@ -22,7 +22,7 @@ class CronFormat
     parse()
   end
   
-  def next()
+  def next_date()
 
     nudge() unless @cron_string =~ %r{/}
     parse()
@@ -69,7 +69,18 @@ class CronFormat
 
     raw_a = @cron_string.split
     raw_a << '*' if raw_a.length <= 5 # add the year?
+ 
+    dayceiling = raw_a[2][/-(\d+)$/,1]
+   
+    if dayceiling and dayceiling.to_i <= @to_time.day then
 
+      dt2 = @to_time.to_datetime
+      next_month = dt2.next_month.month
+      dt2 += 1 until dt2.month == next_month
+
+      @to_time = dt2.to_time 
+    end
+    
     units = @to_time.to_a.values_at(1..4) + [nil, @to_time.year]
 
     procs = {
@@ -109,6 +120,8 @@ class CronFormat
       raw_units << v1
       repeaters << v2
     end
+    
+    
 
     if raw_a[4] != '*' then
       r = /(sun|mon|tues|wed|thurs|fri|satur|sun)(day)?|tue|thu|sat/i    
@@ -121,7 +134,8 @@ class CronFormat
       raw_units[4].gsub!(r,&to_i) 
     end
     
-    @to_expression = raw_a[0..4].join ' '
+    @to_expression = raw_a[0..4].join ' '  
+
     raw_date = raw_units.map.with_index {|x,i| dt[i].call(x) }
 
     # expand the repeater
@@ -153,7 +167,6 @@ class CronFormat
 
       next unless day_valid? d.reverse.take 3
       t = Time.parse(TF % d.reverse)      
-
       # if there is a defined weekday, increment a day at 
       #                          a time to match that weekday
       if wday and wday != t.wday then
@@ -182,6 +195,7 @@ class CronFormat
 
       # starting from the biggest unit, attempt to increment that 
       #                       unit where it is equal to '*'
+
       if t < @to_time then
 
         if t.month < @to_time.month and raw_a[4] == '*' then
