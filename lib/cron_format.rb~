@@ -85,7 +85,7 @@ class CronFormat
       
       if mins[/^\d+$/] then
         @to_time += MINUTE until @to_time.min == mins.to_i 
-        @to_time -= 1
+        @to_time -= MINUTE
       end
       
       @to_time += HOUR until @to_time.hour == hours.to_i if hours[/^\d+$/]

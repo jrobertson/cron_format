@@ -23,8 +23,8 @@ class CronFormat
   end
   
   def next()
-
-    nudge() unless @cron_string =~ %r{/}
+    
+    nudge() #unless @cron_string =~ %r{/}
     parse()
   end
   
@@ -33,13 +33,24 @@ class CronFormat
   def nudge()
 
     a  =  @cron_string.split
-    val = a.detect{|x| x != '*'}
+    
+    val = if @cron_string =~ %r{/} then
+      a.reverse.detect{|x| x[/\//]}
+    else
+      a.detect{|x| x != '*'}
+    end
+    
     index, n = 0, 1
 
     if val then
       index = a.index(val)
       r = val[/\/(\d+)$/,1]     
-      n = r.to_i if r
+
+      n =  if r then
+        r.to_i * 7 if index == 4
+      else
+        val.to_i
+      end
     end
 
     month_proc = lambda {|t1,n|
@@ -61,7 +72,6 @@ class CronFormat
     ]
 
     r = units[index].call @to_time, n
-
     @to_time = r
 
   end    
@@ -89,7 +99,7 @@ class CronFormat
       end
       
       @to_time += HOUR until @to_time.hour == hours.to_i if hours[/^\d+$/]
-    end
+    end    
     
     if wday[/^[0-6]$/] and @to_time.wday != wday.to_i then
       @to_time += DAY until @to_time.wday == wday.to_i
@@ -181,7 +191,7 @@ class CronFormat
       end
     end  
 
-    dates = inflate(raw_date)
+    dates = inflate(raw_date)    
 
     a = dates.map do |date|
 
