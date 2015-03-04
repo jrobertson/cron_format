@@ -44,14 +44,16 @@ class CronFormat
 
     if val then
       index = a.index(val)
+
       r = val[/\/(\d+)$/,1]     
 
       n =  if r then
-        r.to_i * 7 if index == 4
+        index == 4 ? r.to_i * 7 : 0
       else
         val.to_i
       end
     end
+
 
     month_proc = lambda {|t1,n|
       a = t1.to_a

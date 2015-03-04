@@ -233,6 +233,7 @@ class CronFormat
       if t < @to_time then
 
         if t.month < @to_time.month and raw_a[4] == '*' then
+
           # increment the year
           d[4].succ!
           t = Time.parse(TF % d.reverse)
@@ -243,6 +244,7 @@ class CronFormat
             t = Time.parse(TF % d.reverse)
           end
         elsif t.day < @to_time.day and raw_a[3] == '*' then
+
           t = increment_month d
         elsif  (t.hour < @to_time.hour or (t.hour == @to_time.hour \
           and t.min < @to_time.min and raw_a[1] != '*') ) \
@@ -254,11 +256,15 @@ class CronFormat
 
           # increment the hour
           t += HOUR * ((@to_time.hour - d[1].to_i) + 1)
-        elsif raw_a[0] == '*' then
+        elsif raw_a[0][0] == '*' then
+
+          i = 0
+
           # increment the minute
           t += MINUTE * ((@to_time.min - d[0].to_i) + 1)
           t = procs.values[i].call(t, repeaters[i].to_i) if repeaters[i]
         elsif raw_a[3] == '*' then
+
           t = increment_month d        
         end   
 
