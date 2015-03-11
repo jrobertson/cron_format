@@ -34,8 +34,8 @@ class CronFormat
 
     a  =  @cron_string.split
     
-    val = if @cron_string =~ %r{/} then
-      a.reverse.detect{|x| x[/\//]}
+    val = if @cron_string =~ %r{[/,]} then
+      a.reverse.detect{|x| x[/[\/,]/]}
     else
       a.detect{|x| x != '*'}
     end
@@ -45,12 +45,19 @@ class CronFormat
     if val then
       index = a.index(val)
 
-      r = val[/\/(\d+)$/,1]     
+      r = val[/,|\/(\d+)$/,1]      
 
       n =  if r then
+      
         index == 4 ? r.to_i * 7 : 0
+        
       else
-        val.to_i
+                
+        if val =~ /,/ then
+          1
+        else
+          val.to_i
+        end
       end
     end
 
@@ -74,6 +81,7 @@ class CronFormat
     ]
 
     r = units[index].call @to_time, n
+
     @to_time = r
 
   end    
