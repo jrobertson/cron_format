@@ -25,6 +25,7 @@ class CronFormat
   def next()
     
     nudge() #unless @cron_string =~ %r{/}
+    #puts ':to_time : ' + @to_time.inspect
     parse()
   end
   
@@ -32,10 +33,11 @@ class CronFormat
   
   def nudge()
 
+    t1 = @to_time
     a  =  @cron_string.split
     
-    val = if @cron_string =~ %r{[/,]} then
-      a.reverse.detect{|x| x[/[\/,]/]}
+    val = if @cron_string =~ %r{[/,-]} then
+      a.reverse.detect{|x| x[/[\/,-]/]}
     else
       a.detect{|x| x != '*'}
     end
@@ -53,7 +55,7 @@ class CronFormat
         
       else
                 
-        if val =~ /,/ then
+        if val =~ /[,-]/ then
           1
         else
           val.to_i
@@ -81,6 +83,7 @@ class CronFormat
     ]
 
     r = units[index].call @to_time, n
+    #r += MINUTE  if r == t1
 
     @to_time = r
 
