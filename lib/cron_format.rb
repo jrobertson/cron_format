@@ -39,7 +39,7 @@ class CronFormat
     val = if @cron_string =~ %r{[/,-]} then
       a.reverse.detect{|x| x[/[\/,-]/]}
     else
-      a.detect{|x| x != '*'}
+      a[1..-1].detect{|x| x != '*'}
     end
     
     index, n = 0, 1
