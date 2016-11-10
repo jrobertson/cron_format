@@ -216,11 +216,11 @@ class CronFormat
       t = Time.parse(TF % d.reverse)      
       # if there is a defined weekday, increment a day at 
       #                          a time to match that weekday
-      if wday and wday != t.wday then
+      if wday then
         
         t = Time.parse(TF % d.reverse)        
 
-        if repeaters[4] then
+        if repeaters[4] and wday == t.wday then
           t += repeaters[4].to_i * WEEK while t < @to_time
         else
           d[2], d[3] = @to_time.to_a.values_at(3,4).map(&:to_s)         
