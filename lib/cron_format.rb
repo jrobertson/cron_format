@@ -17,8 +17,8 @@ class CronFormat
 
   attr_reader :to_time, :to_expression
 
-  def initialize(cron_string, now=Time.now)  
-    @cron_string, @to_time = cron_string, now
+  def initialize(cron_string, now=Time.now, debug: false)  
+    @cron_string, @to_time, @debug = cron_string, now, debug
     parse()
   end
   
@@ -51,6 +51,7 @@ class CronFormat
   def nudge()
 
     t1 = @to_time
+    puts 't1: ' + t1.inspect if @debug
     a  =  @cron_string.split
     
     val = if @cron_string =~ %r{[/,-]} then
@@ -60,6 +61,8 @@ class CronFormat
     end
     
     index, n = 0, 1
+    
+    puts 'val: ' + val.inspect if @debug
 
     if val then
       index = a.index(val)
@@ -80,7 +83,8 @@ class CronFormat
       end
     end
 
-
+    puts 'index: ' + index.inspect if @debug
+    
     month_proc = lambda {|t1,n|
       a = t1.to_a
       a[4] = a[4] + n <= 12 ? a[4] + n  : a[4] + n - 12
@@ -98,11 +102,25 @@ class CronFormat
       month_proc,
       day_proc
     ]
-
+    
+    if @debug then
+      puts '@to_time: ' + @to_time.inspect 
+      puts 'n: ' + n.inspect
+    end
+    
     r = units[index].call @to_time, n
+    
+    puts 'r: ' + r.inspect if @debug
+    
+    @to_time = if n > 1 then
+    
+      # given day light savings, ensure the time fragment is preserved 
+      Time.new(r.year, r.month, r.day, t1.hour, t1.min)
+      
+    else
+      r
+    end
     #r += MINUTE  if r == t1
-
-    @to_time = r
 
   end    
   
