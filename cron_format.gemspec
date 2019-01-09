@@ -1,10 +1,11 @@
 Gem::Specification.new do |s|
   s.name = 'cron_format'
-  s.version = '0.4.0'
+  s.version = '0.5.0'
   s.summary = 'Accepts a cron expression and outputs the relative ' + 
       'time (e.g. 0 7 1 1 * * => 2019-01-01 07:00:00 +0000'
   s.authors = ['James Robertson']
   s.files = Dir['lib/cron_format.rb']
+  s.add_runtime_dependency('c32', '~> 0.1', '>=0.1.2')
   s.signing_key = '../privatekeys/cron_format.pem'
   s.cert_chain  = ['gem-public_cert.pem']  
   s.license = 'MIT'

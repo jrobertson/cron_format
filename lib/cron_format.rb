@@ -4,6 +4,7 @@
 
 require 'date'
 require 'time'
+require 'c32'
 
 
 MINUTE = 60
@@ -14,12 +15,17 @@ TF = "%s-%s-%s %s:%s"
 
 
 class CronFormat
+  using ColouredText
 
   attr_reader :to_time, :to_expression
 
   def initialize(cron_string, now=Time.now, debug: false)  
-    @cron_string, @to_time, @debug = cron_string, now, debug
+    
+    puts 'inside CronFormat'.info if debug
+    @cron_string, @now, @debug = cron_string, now, debug
+    @to_time = @now
     parse()
+    
   end
   
   # supply a Time object. Modifying the date can be helpful when 
@@ -51,7 +57,7 @@ class CronFormat
   def nudge()
 
     t1 = @to_time
-    puts 't1: ' + t1.inspect if @debug
+    puts ('t1: ' + t1.inspect).debug if @debug
     a  =  @cron_string.split
     
     val = if @cron_string =~ %r{[/,-]} then
@@ -62,7 +68,7 @@ class CronFormat
     
     index, n = 0, 1
     
-    puts 'val: ' + val.inspect if @debug
+    puts ('val: ' + val.inspect).debug if @debug
 
     if val then
       index = a.index(val)
@@ -83,7 +89,7 @@ class CronFormat
       end
     end
 
-    puts 'index: ' + index.inspect if @debug
+    puts ('index: ' + index.inspect).debug if @debug
     
     month_proc = lambda {|t1,n|
       a = t1.to_a
@@ -104,13 +110,13 @@ class CronFormat
     ]
     
     if @debug then
-      puts '@to_time: ' + @to_time.inspect 
-      puts 'n: ' + n.inspect
+      puts ('@to_time: ' + @to_time.inspect).debug
+      puts ('n: ' + n.inspect).debug
     end
     
     r = units[index].call @to_time, n
     
-    puts 'r: ' + r.inspect if @debug
+    puts ('r: ' + r.inspect).debug if @debug
     
     @to_time = if n > 1 then
     
@@ -125,6 +131,8 @@ class CronFormat
   end    
   
   def parse()
+    
+    puts ('0. @to_time: ' + @to_time.inspect).debug if @debug
 
     raw_a = @cron_string.split
     raw_a << '*' if raw_a.length <= 5 # add the year?
@@ -135,9 +143,28 @@ class CronFormat
                                                 @to_time.month == month.to_i
     end
     
+    puts ('1. @to_time: ' + @to_time.inspect).debug if @debug
+    
+    #
+    
+    if @debug then
+      puts ('1.5 @to_time: ' + @to_time.inspect).debug 
+      puts ('hours: ' + hours.inspect).debug
+      puts ('mins: ' + mins.inspect).debug
+    end
+    
     if mins[/^\d+$/] and hours[/^\d+$/] then
-      @to_time += MINUTE until @to_time.min == mins.to_i and \
-                                                  @to_time.hour == hours.to_i
+
+      if @to_time.to_date != @now.to_date then
+        @to_time = Time.local(@to_time.year, @to_time.month, @to_time.day)
+      end
+      
+      until (@to_time.min == mins.to_i and @to_time.hour == hours.to_i) \
+          or (@to_time - 1).isdst != @to_time.isdst do
+        
+        puts ('1.7 @to_time: ' + @to_time.inspect).debug if @debug
+        @to_time += MINUTE
+      end
       @to_time -= MINUTE
     else
       
@@ -147,7 +174,9 @@ class CronFormat
       end
       
       @to_time += HOUR until @to_time.hour == hours.to_i if hours[/^\d+$/]
-    end    
+    end
+
+    puts ('2. @to_time: ' + @to_time.inspect).debug if @debug    
     
     if wday[/^[0-6]$/] and @to_time.wday != wday.to_i then
       @to_time += DAY until @to_time.wday == wday.to_i
@@ -163,6 +192,8 @@ class CronFormat
 
       @to_time = dt2.to_time 
     end
+    
+    puts ('3. @to_time: ' + @to_time.inspect).debug if @debug
 
     units = @to_time.to_a.values_at(1..4) + [nil, @to_time.year]
 
@@ -239,7 +270,9 @@ class CronFormat
       end
     end  
 
-    dates = inflate(raw_date)    
+    dates = inflate(raw_date)
+
+    puts ('dates: ' + dates.inspect).debug if @debug
 
     a = dates.map do |date|
 
@@ -278,6 +311,11 @@ class CronFormat
       # starting from the biggest unit, attempt to increment that 
       #                       unit where it is equal to '*'
 
+      if @debug then
+        puts ('t: ' + t.inspect).debug
+        puts ('@to_time: ' + @to_time.inspect).debug
+      end
+      
       if t < @to_time then
 
         if t.month < @to_time.month and raw_a[4] == '*' then
@@ -285,6 +323,7 @@ class CronFormat
           # increment the year
           d[4].succ!
           t = Time.parse(TF % d.reverse)
+          puts 't: ' + t.inspect if @debug
 
           if repeaters[4] then
 
@@ -345,6 +384,8 @@ class CronFormat
 
       t     
     end
+    
+    puts ('a: ' + a.inspect).debug if @debug
 
     @to_time = a.compact.min
   end
