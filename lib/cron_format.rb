@@ -49,7 +49,7 @@ class CronFormat
     
     nudge() #unless @cron_string =~ %r{/}
     #puts ':to_time : ' + @to_time.inspect
-    parse()
+    parse(nudged: true)
   end
   
   private    
@@ -130,7 +130,7 @@ class CronFormat
 
   end    
   
-  def parse()
+  def parse(nudged: false)
     
     puts ('0. @to_time: ' + @to_time.inspect).debug if @debug
 
@@ -337,6 +337,7 @@ class CronFormat
           and t.min < @to_time.min and raw_a[1] != '*') ) \
             and raw_a[2] == '*' then
 
+          puts 'incrementing the day' if @debug
           # increment the day
           t += DAY * ((@to_time.day - d[2].to_i) + 1)
         elsif t.min < @to_time.min and raw_a[1] == '*' then
@@ -372,7 +373,7 @@ class CronFormat
 
       # finally, if the date is still less than the current time we can
       #      increment the date using any repeating intervals
-      if t <= @to_time and repeaters.any? then
+      if (t < @to_time or (!nudged and t == @to_time)) and repeaters.any? then
 
         repeaters.each_with_index do |x,i|
 
@@ -399,6 +400,8 @@ class CronFormat
   end  
 
   def increment_month(d)
+    
+    puts 'inside increment_month' if @debug
 
     if d[3].to_i <= 11 then
       d[3].succ!

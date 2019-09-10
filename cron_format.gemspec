@@ -1,6 +1,6 @@
 Gem::Specification.new do |s|
   s.name = 'cron_format'
-  s.version = '0.5.0'
+  s.version = '0.6.0'
   s.summary = 'Accepts a cron expression and outputs the relative ' + 
       'time (e.g. 0 7 1 1 * * => 2019-01-01 07:00:00 +0000'
   s.authors = ['James Robertson']
